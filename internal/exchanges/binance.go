@@ -3,10 +3,14 @@ package exchanges
 import (
 	"context"
 	"fmt"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/risingwavelabs/eris"
+
+	"ob-chache/internal/utils"
 )
 
 const (
@@ -16,11 +20,16 @@ const (
 )
 
 type Binance struct {
-	wsCon *websocket.Conn
+	wsCon   *websocket.Conn
+	idCtr   atomic.Int64
+	msgChan chan string
 }
 
-func (s *Binance) Name() string                 { return "Binance Websocket" }
-func (s *Binance) Init(_ context.Context) error { return nil }
+func (s *Binance) Name() string { return "Binance Websocket" }
+func (s *Binance) Init(_ context.Context) error {
+	s.msgChan = make(chan string, 1)
+	return nil
+}
 
 func (s *Binance) Run(ctx context.Context) (err error) {
 	//
@@ -35,30 +44,34 @@ func (s *Binance) Run(ctx context.Context) (err error) {
 	fmt.Printf("Connected to Binance via %s.\n", binanceSpotSocketURL)
 
 	//
-	// Listen to messages.
+	// Goroutine to receive messages.
 
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		default:
-		}
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
-		_, message, err := s.wsCon.ReadMessage()
-		if err != nil {
-			closeErr, ok := err.(*websocket.CloseError)
-			if ok && closeErr.Code == websocket.CloseNormalClosure {
-				// All good.
-				break
-			}
-			return eris.Wrap(err, "error reading message")
-		}
+	wg := sync.WaitGroup{}
+	var lErr, sErr error
 
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defer cancel()
+		lErr = s.listenForMessages(ctx)
+	}()
+
+	//
+	// Working loop.
+
+	for msg := range utils.CtxChanIter(ctx, s.msgChan) {
 		// TODO: Process message.
-		fmt.Println(time.Now().Format(time.RFC3339), string(message))
+		fmt.Println(time.Now().Format(time.RFC3339), msg)
 	}
 
-	return nil
+	//
+	// Shut down.
+
+	wg.Wait()
+	return eris.Join(lErr, sErr)
 }
 
 func (s *Binance) Stop() error {
@@ -73,4 +86,26 @@ func (s *Binance) Stop() error {
 	}
 
 	return nil
+}
+
+func (s *Binance) listenForMessages(ctx context.Context) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+		}
+
+		_, message, err := s.wsCon.ReadMessage() // blocking
+		if err != nil {
+			closeErr, ok := err.(*websocket.CloseError)
+			if ok && closeErr.Code == websocket.CloseNormalClosure {
+				// All good.
+				return nil
+			}
+			return eris.Wrap(err, "error reading message")
+		}
+
+		s.msgChan <- string(message)
+	}
 }
