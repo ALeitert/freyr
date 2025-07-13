@@ -8,7 +8,6 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/risingwavelabs/eris"
@@ -25,12 +24,12 @@ const (
 type Binance struct {
 	wsCon   *websocket.Conn
 	idCtr   atomic.Int64
-	msgChan chan string
+	msgChan chan []byte
 }
 
 func (s *Binance) Name() string { return "Binance Websocket" }
 func (s *Binance) Init(_ context.Context) error {
-	s.msgChan = make(chan string, 1)
+	s.msgChan = make(chan []byte, 8)
 	return nil
 }
 
@@ -65,9 +64,60 @@ func (s *Binance) Run(ctx context.Context) (err error) {
 	//
 	// Working loop.
 
-	for msg := range utils.CtxChanIter(ctx, s.msgChan) {
-		// TODO: Process message.
-		fmt.Println(time.Now().Format(time.RFC3339), msg)
+	// Send subscription message.
+	_, err = s.sendMessage("SUBSCRIBE", "btcusdt@depth@100ms")
+
+	// Temporary order book until it is properly established.
+	// obMinVersion := math.MaxInt
+	obVersion := 0
+	obChanges := map[float64]float64{}
+
+	type subMessage struct {
+		Result any `json:"result,omitempty,omitzero"`
+		ID     int `json:"id,omitempty,omitzero"`
+
+		Stream string `json:"stream,omitempty,omitzero"`
+		Data   *struct {
+			EType string `json:"e,omitempty,omitzero"` // event type
+			ETime int64  `json:"E,omitempty,omitzero"` // event time
+			UF    int    `json:"U,omitempty,omitzero"` // first update ID in event
+			UL    int    `json:"u,omitempty,omitzero"` // final update ID in event
+
+			Asks [][]string `json:"a,omitempty,omitzero"`
+			Bids [][]string `json:"b,omitempty,omitzero"`
+		} `json:"data,omitempty,omitzero"`
+	}
+
+	for rawMsg := range utils.CtxChanIter(ctx, s.msgChan) {
+		var msg subMessage
+		err := json.Unmarshal(rawMsg, &msg)
+		if err != nil {
+			fmt.Println(err)
+			return eris.Wrap(err, "failed to unmarshal message")
+		}
+
+		if msg.Data == nil {
+			// Ignore for now.
+			continue
+		}
+
+		// Verify and update version.
+		if obVersion != 0 && obVersion+1 != msg.Data.UF {
+			return eris.New("skipped ob version")
+		}
+		obVersion = msg.Data.UL
+
+		// Update order book.
+		for _, ask := range msg.Data.Asks {
+			price, _ := strconv.ParseFloat(ask[0], 64)
+			amount, _ := strconv.ParseFloat(ask[1], 64)
+
+			if amount == 0.0 {
+				delete(obChanges, price)
+			} else {
+				obChanges[price] = amount
+			}
+		}
 	}
 
 	//
@@ -109,7 +159,7 @@ func (s *Binance) listenForMessages(ctx context.Context) error {
 			return eris.Wrap(err, "error reading message")
 		}
 
-		s.msgChan <- string(message)
+		s.msgChan <- message
 	}
 }
 
