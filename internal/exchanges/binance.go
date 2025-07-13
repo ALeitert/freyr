@@ -2,7 +2,10 @@ package exchanges
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -108,4 +111,46 @@ func (s *Binance) listenForMessages(ctx context.Context) error {
 
 		s.msgChan <- string(message)
 	}
+}
+
+func (s *Binance) sendMessage(method string, params ...string) (int, error) {
+	//
+	// Convert message to JSON.
+
+	msgBuilder := strings.Builder{}
+	msgBuilder.WriteString("{")
+
+	jsonMethod, err := json.Marshal(method)
+	if err != nil {
+		return 0, eris.Wrapf(err, "failed to marshal method string: '%s'", method)
+	}
+
+	msgBuilder.WriteString(`"method":`)
+	msgBuilder.Write(jsonMethod)
+
+	msgID := int(s.idCtr.Add(1))
+	msgBuilder.WriteString(`,"id":`)
+	msgBuilder.WriteString(strconv.Itoa(msgID))
+
+	if len(params) > 0 {
+		jsonParams, err := json.Marshal(params)
+		if err != nil {
+			return 0, eris.Wrapf(err, "failed to marshal param strings: '%s'", params)
+		}
+
+		msgBuilder.WriteString(`,"params":`)
+		msgBuilder.Write(jsonParams)
+	}
+
+	msgBuilder.WriteString("}")
+
+	//
+	// Submit message.
+
+	err = s.wsCon.WriteMessage(websocket.TextMessage, []byte(msgBuilder.String()))
+	if err != nil {
+		return 0, eris.Wrap(err, "failed to submit message")
+	}
+
+	return msgID, nil
 }
