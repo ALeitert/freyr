@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"ob-chache/internal/exchanges"
 	"ob-chache/internal/services"
 )
 
@@ -20,7 +21,7 @@ func main() {
 	// Run services.
 
 	err := services.Run(ctx, []services.Service{
-		// TODO: List services.
+		&exchanges.Binance{},
 	})
 	if err != nil {
 		fmt.Println("Error while running services:", err)

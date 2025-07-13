@@ -1,3 +1,5 @@
+github.com/gorilla/websocket v1.5.3 h1:saDtZ6Pbx/0u+bgYQ3q96pZgCzfhKXGPqt7kZ72aNNg=
+github.com/gorilla/websocket v1.5.3/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/risingwavelabs/eris v1.3.1 h1:c1F4UxAELtS8tWvONTf6M+kLH6PHjral+QY7g1U2L6U=
 github.com/risingwavelabs/eris v1.3.1/go.mod h1:T3aejJhyzuCBKyV498n0AOsgvCr/S/j7n86tnOaabrQ=
 google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f h1:BWUVssLB0HVOSY78gIdvk1dTVYtT1y8SBWtPYuTJ/6w=
