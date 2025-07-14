@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"ob-chache/internal/exchanges"
+	"ob-chache/internal/exchanges/binance"
 	"ob-chache/internal/services"
 
 	"github.com/risingwavelabs/eris"
@@ -23,7 +23,7 @@ func main() {
 	// Run services.
 
 	err := services.Run(ctx, []services.Service{
-		&exchanges.Binance{},
+		&binance.Binance{},
 	})
 	if err != nil {
 		fmt.Println("Error while running services:", eris.ToString(err, true))
