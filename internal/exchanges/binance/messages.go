@@ -26,7 +26,7 @@ type subMessage struct {
 	} `json:"data,omitempty,omitzero"`
 }
 
-func (s *Binance) listenForMessages(ctx context.Context) error {
+func (s *Binance) listenForMessages(ctx context.Context, msgChan chan<- []byte) error {
 	for {
 		select {
 		case <-ctx.Done():
@@ -44,7 +44,7 @@ func (s *Binance) listenForMessages(ctx context.Context) error {
 			return eris.Wrap(err, "error reading message")
 		}
 
-		s.msgChan <- message
+		msgChan <- message
 	}
 }
 
