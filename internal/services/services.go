@@ -31,7 +31,7 @@ func Run(ctx context.Context, services []Service) error {
 	//
 	// Run services.
 
-	errors := make([]error, len(services))
+	errors := make([]error, 2*len(services))
 
 	wg := sync.WaitGroup{}
 	wg.Add(len(services))
@@ -39,7 +39,7 @@ func Run(ctx context.Context, services []Service) error {
 		go func() {
 			defer wg.Done()
 			defer cancel()
-			errors[i] = svc.Run(ctx)
+			errors[2*i] = svc.Run(ctx)
 		}()
 	}
 
@@ -52,7 +52,7 @@ func Run(ctx context.Context, services []Service) error {
 	for i, svc := range services {
 		err := svc.Stop()
 		if err != nil {
-			errors[i] = eris.Wrapf(err, "failed to shut down %s", svc.Name())
+			errors[2*i+1] = eris.Wrapf(err, "failed to shut down %s", svc.Name())
 		}
 	}
 	wg.Wait()

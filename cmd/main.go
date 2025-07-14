@@ -9,6 +9,8 @@ import (
 
 	"ob-chache/internal/exchanges"
 	"ob-chache/internal/services"
+
+	"github.com/risingwavelabs/eris"
 )
 
 func main() {
@@ -24,7 +26,7 @@ func main() {
 		&exchanges.Binance{},
 	})
 	if err != nil {
-		fmt.Println("Error while running services:", err)
+		fmt.Println("Error while running services:", eris.ToString(err, true))
 		os.Exit(1) //nolint:gocritic
 	}
 }
