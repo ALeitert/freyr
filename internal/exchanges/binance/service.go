@@ -85,10 +85,8 @@ func (s *Binance) Run(ctx context.Context) (err error) {
 	maxUpdateVersion := 0
 	msgBuffer := []*subMessage{}
 
-	// TODO: Proper order book type.
 	snapshotVersion := 0
-	obAskSnapshot := map[float64]float64{}
-	obBidSnapshot := map[float64]float64{}
+	orderBook := order.NewBook()
 
 	for obComplete := false; !obComplete; {
 		select {
@@ -138,25 +136,10 @@ func (s *Binance) Run(ctx context.Context) (err error) {
 				continue
 			}
 
+			orderBook.Update(rawOB.Asks, rawOB.Bids, -1)
+
 			obComplete = true
 			snapshotVersion = rawOB.LastUpdateID
-
-			askUpdates, bidUpdate := order.Parse(rawOB.Asks, rawOB.Bids)
-
-			for _, entry := range askUpdates {
-				if entry.Amount == 0.0 {
-					delete(obAskSnapshot, entry.Price)
-				} else {
-					obAskSnapshot[entry.Price] = entry.Amount
-				}
-			}
-			for _, entry := range bidUpdate {
-				if entry.Amount == 0.0 {
-					delete(obBidSnapshot, entry.Price)
-				} else {
-					obBidSnapshot[entry.Price] = entry.Amount
-				}
-			}
 		}
 	}
 
@@ -168,27 +151,11 @@ func (s *Binance) Run(ctx context.Context) (err error) {
 			continue
 		}
 
-		askUpdates, bidUpdate := order.Parse(msg.Data.Asks, msg.Data.Bids)
-
-		for _, entry := range askUpdates {
-			if entry.Amount == 0.0 {
-				delete(obAskSnapshot, entry.Price)
-			} else {
-				obAskSnapshot[entry.Price] = entry.Amount
-			}
-		}
-		for _, entry := range bidUpdate {
-			if entry.Amount == 0.0 {
-				delete(obBidSnapshot, entry.Price)
-			} else {
-				obBidSnapshot[entry.Price] = entry.Amount
-			}
-		}
+		orderBook.Update(msg.Data.Asks, msg.Data.Bids, msg.Data.ETime)
 	}
 	msgBuffer = nil //nolint: ineffassign
 
-	// TODO: Send updates somewhere.
-	fmt.Println("order book complete")
+	fmt.Println("Order book complete.")
 
 	//
 	// Continue listening to updates.
@@ -216,24 +183,8 @@ func (s *Binance) Run(ctx context.Context) (err error) {
 		//
 		// Process updates.
 
+		orderBook.Update(msg.Data.Asks, msg.Data.Bids, msg.Data.ETime)
 		maxUpdateVersion = msg.Data.UL
-		askUpdates, bidUpdate := order.Parse(msg.Data.Asks, msg.Data.Bids)
-
-		for _, entry := range askUpdates {
-			if entry.Amount == 0.0 {
-				delete(obAskSnapshot, entry.Price)
-			} else {
-				obAskSnapshot[entry.Price] = entry.Amount
-			}
-		}
-		for _, entry := range bidUpdate {
-			if entry.Amount == 0.0 {
-				delete(obBidSnapshot, entry.Price)
-			} else {
-				obBidSnapshot[entry.Price] = entry.Amount
-			}
-		}
-		// TODO: Send updates somewhere.
 	}
 
 	return nil

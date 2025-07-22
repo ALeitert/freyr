@@ -16,7 +16,7 @@ type subMessage struct {
 
 	Stream string `json:"stream,omitempty,omitzero"`
 	Data   *struct {
-		EType string `json:"e,omitempty,omitzero"` // event type
+		EType string `json:"e,omitempty,omitzero"` // event type (in ms)
 		ETime int64  `json:"E,omitempty,omitzero"` // event time
 		UF    int    `json:"U,omitempty,omitzero"` // first update ID in event
 		UL    int    `json:"u,omitempty,omitzero"` // final update ID in event
