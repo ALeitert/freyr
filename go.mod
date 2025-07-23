@@ -3,6 +3,7 @@ module ob-chache
 go 1.24.5
 
 require (
+	github.com/google/btree v1.1.3
 	github.com/gorilla/websocket v1.5.3
 	github.com/risingwavelabs/eris v1.3.1
 )

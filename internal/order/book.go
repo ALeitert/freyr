@@ -2,6 +2,8 @@ package order
 
 import (
 	"strconv"
+
+	"github.com/google/btree"
 )
 
 // TODO: Better types.
@@ -10,18 +12,27 @@ type (
 	Amount float64
 )
 
+type bookEntry struct {
+	price  Price
+	amount Amount
+}
+
+func bookEntryLess(a, b bookEntry) bool {
+	return a.price < b.price
+}
+
 type Book struct {
-	// TODO: B-Tree?
-	curAsks map[Price]Amount
-	curBids map[Price]Amount
+	// TODO: Better B-Tree?
+	curAsks *btree.BTreeG[bookEntry]
+	curBids *btree.BTreeG[bookEntry]
 
 	// TODO: Cache
 }
 
 func NewBook() Book {
 	return Book{
-		curAsks: make(map[Price]Amount),
-		curBids: make(map[Price]Amount),
+		curAsks: btree.NewG(64, bookEntryLess),
+		curBids: btree.NewG(64, bookEntryLess),
 	}
 }
 
@@ -33,15 +44,27 @@ func (b *Book) Update(
 	applyUpdates(b.curBids, rawBids)
 }
 
-func applyUpdates(cur map[Price]Amount, rawUpdates [][]string) {
+func (b *Book) MinAsk() Price {
+	minEntry, _ := b.curAsks.Min()
+	return minEntry.price
+}
+
+func (b *Book) MaxBid() Price {
+	maxEntry, _ := b.curBids.Max()
+	return maxEntry.price
+}
+
+func applyUpdates(cur *btree.BTreeG[bookEntry], rawUpdates [][]string) {
 	for _, update := range rawUpdates {
 		price, _ := strconv.ParseFloat(update[0], 64)
 		amount, _ := strconv.ParseFloat(update[1], 64)
 
+		entry := bookEntry{Price(price), Amount(amount)}
+
 		if amount == 0.0 {
-			delete(cur, Price(price))
+			cur.Delete(entry)
 		} else {
-			cur[Price(price)] = Amount(amount)
+			cur.ReplaceOrInsert(entry)
 		}
 	}
 }
