@@ -86,7 +86,7 @@ func (s *Binance) Run(ctx context.Context) (err error) {
 	msgBuffer := []*subMessage{}
 
 	snapshotVersion := 0
-	orderBook := order.NewBook()
+	orderBook := order.NewBook(1.0)
 
 	for obComplete := false; !obComplete; {
 		select {
