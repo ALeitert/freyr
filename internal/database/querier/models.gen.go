@@ -3,3 +3,17 @@
 //   sqlc v1.29.0
 
 package querier
+
+import (
+	"time"
+)
+
+type Candle struct {
+	Pair       string
+	Start      time.Time
+	PriceOpen  float64
+	PriceClose float64
+	PriceLow   float64
+	PriceHigh  float64
+	Volume     float64
+}
