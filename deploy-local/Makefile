@@ -7,13 +7,16 @@ deploy:
 	$(eval TMP_CONFIG := $(shell mktemp))
 	yq eval \
 		'.nodes[0].extraMounts[0].hostPath = "$(shell pwd)/.postgres_data"' \
-		cluster.yaml \
+		config_cluster.yaml \
 		> $(TMP_CONFIG)
-
 	kind create cluster --config $(TMP_CONFIG)
 	rm $(TMP_CONFIG)
 
 	helm install freyr ./charts -f ./charts/values.yaml
+	
+	kubectl create namespace monitoring
+	helm install prometheus prometheus-community/prometheus -n monitoring -f ./config_prometheus.yaml
+
 	make migrate-pg
 
 

@@ -1,0 +1,6 @@
+# https://github.com/prometheus-community/helm-charts/blob/main/charts/prometheus/values.yaml
+
+server:
+  global:
+    scrape_interval: 15s
+    scrape_timeout: 5s
