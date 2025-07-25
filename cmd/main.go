@@ -13,6 +13,7 @@ import (
 	"freyr/internal/config"
 	"freyr/internal/database"
 	"freyr/internal/exchanges/binance"
+	"freyr/internal/exchanges/coinbase"
 	"freyr/internal/metrics"
 	"freyr/internal/services"
 )
@@ -57,6 +58,7 @@ func run(ctx context.Context) error {
 	err = services.Run(ctx, []services.Service{
 		&metrics.Server{},
 		&binance.Binance{},
+		&coinbase.Coinbase{},
 	})
 	if err != nil {
 		return eris.Wrap(err, "error while running services")
