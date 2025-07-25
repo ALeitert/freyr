@@ -3,6 +3,11 @@ CONFIG_FILE=config.yaml
 
 
 deploy:
+	kind delete cluster
+	kind create cluster
+
+	helm install freyr ./charts -f ./charts/values.yaml
+
 	make pg-run-local
 
 
