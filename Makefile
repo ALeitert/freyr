@@ -1,12 +1,8 @@
 PROJ_DIR=$(shell pwd)
 
 
-### Mod Tidy ###
-
-mod-tidy-check:
-	git restore :/ && git clean -d -f
-	go mod tidy
-	git diff --exit-code
+run:
+	go run cmd/main.go
 
 
 ### Linting ###
@@ -23,3 +19,36 @@ install-golangci-lint: ## install golang lint
 
 lint-check: check-golangci-lint
 	$(PROJ_DIR)/bin/golangci-lint run --config $(PROJ_DIR)/.golangci.yaml
+
+
+### Unit Tests ###
+
+ut:
+	go test -parallel=1 -race ./...
+
+
+### SQL ###
+
+DB_DIR=$(PROJ_DIR)/internal/database
+
+gen-sql: gen-clean-sql
+	echo $(PROJ_DIR)
+	docker run --rm -v $(DB_DIR):/src -w /src/sql sqlc/sqlc generate
+
+gen-clean-sql:
+	@cd $(DB_DIR)/querier && rm -f *gen.go
+
+
+### Build and Deploy ###
+
+codegen:
+	make gen-sql
+	go mod tidy
+
+codegen-check:
+	git restore :/ && git clean -d -f
+	make codegen
+	git diff --exit-code
+
+build-docker: codegen
+	docker build -f ./Dockerfile . -t freyr
