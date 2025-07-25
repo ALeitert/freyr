@@ -9,7 +9,7 @@ import (
 
 	"github.com/risingwavelabs/eris"
 
-	"ob-chache/internal/utils"
+	"freyr/internal/utils"
 )
 
 type bookSnapshot struct {

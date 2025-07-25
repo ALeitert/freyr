@@ -1,4 +1,4 @@
-module ob-chache
+module freyr
 
 go 1.24.5
 

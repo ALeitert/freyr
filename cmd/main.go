@@ -7,8 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"ob-chache/internal/exchanges/binance"
-	"ob-chache/internal/services"
+	"freyr/internal/exchanges/binance"
+	"freyr/internal/services"
 
 	"github.com/risingwavelabs/eris"
 )

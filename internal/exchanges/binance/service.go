@@ -11,8 +11,8 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/risingwavelabs/eris"
 
-	"ob-chache/internal/order"
-	"ob-chache/internal/utils"
+	"freyr/internal/order"
+	"freyr/internal/utils"
 )
 
 const (
