@@ -52,3 +52,6 @@ codegen-check:
 
 build-docker: codegen
 	docker build -f ./Dockerfile . -t freyr
+
+deploy-local: build-docker
+	cd deploy-local; make deploy
