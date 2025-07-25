@@ -1,0 +1,9 @@
+freyr:
+  database:
+    port: 5432
+    user: freyr
+    password: freyr
+    name: freyr
+
+postgres:
+  externalPort: 32345

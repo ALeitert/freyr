@@ -1,6 +1,0 @@
-database:
-  host: localhost
-  port: 5432
-  user: freyr
-  password: freyr
-  name: freyr
