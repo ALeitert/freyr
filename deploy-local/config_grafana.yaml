@@ -1,0 +1,28 @@
+# https://github.com/grafana/helm-charts/blob/main/charts/grafana/values.yaml
+
+adminUser: admin
+adminPassword: admin123
+
+## Configure grafana datasources
+## ref: http://docs.grafana.org/administration/provisioning/#datasources
+##
+datasources:
+ datasources.yaml:
+   apiVersion: 1
+   datasources:
+    - name: Prometheus
+      type: prometheus
+      url: http://prometheus-server.monitoring.svc.cluster.local
+      isDefault: true
+    
+    - name: Postgres
+      type: postgres
+      access: proxy
+      isDefault: false
+      url: postgres.freyr.svc.cluster.local:5432
+      database: freyr
+      user: freyr
+      secureJsonData:
+        password: freyr
+      jsonData:
+        sslmode: disable  # options: disable, require, verify-ca, verify-full

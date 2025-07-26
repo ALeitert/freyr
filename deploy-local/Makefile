@@ -16,6 +16,7 @@ deploy:
 	
 	kubectl create namespace monitoring
 	helm install prometheus prometheus-community/prometheus -n monitoring -f ./config_prometheus.yaml
+	helm install grafana    grafana/grafana                 -n monitoring -f ./config_grafana.yaml
 
 	make migrate-pg
 
