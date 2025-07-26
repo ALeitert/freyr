@@ -31,19 +31,16 @@ const (
 
 // Collects the candles for a given pair since the latest candle.
 func (svc *Coinbase) collectRecentCandles(ctx context.Context, pair string) error {
-	lastOld, err := database.GetLatestCandle(ctx, pair)
+	start, err := svc.startTimestamp(ctx, pair)
 	if err != nil {
 		return err
 	}
 
-	firstNew := max(lastOld.Unix()+Granularity, MinTimestamp)
-	now := time.Now().Unix() - Granularity
+	now := time.Now().Unix()
+	now -= now % Granularity
 
-	for start := firstNew; start <= now; start += Granularity * MaxPayload {
-		candles, err := svc.downloadCandles(
-			ctx, pair, start,
-			start+Granularity*(MaxPayload-1), // `end` is inclusive.
-		)
+	for ; start <= now; start += Granularity * MaxPayload {
+		candles, err := svc.downloadCandles(ctx, pair, start, Granularity)
 		if err != nil {
 			return err
 		}
@@ -57,10 +54,44 @@ func (svc *Coinbase) collectRecentCandles(ctx context.Context, pair string) erro
 	return nil
 }
 
-func (svc *Coinbase) downloadCandles(ctx context.Context, pair string, start, end int64) ([]querier.InsertCandlesParams, error) {
-	// Normalise timestamps.
+func (svc *Coinbase) startTimestamp(ctx context.Context, pair string) (int64, error) {
+	lastOld, err := database.GetLatestCandle(ctx, pair)
+	if err != nil {
+		return 0, err
+	}
+
+	if lastOld != (time.Time{}) {
+		return lastOld.Unix() + Granularity, nil
+	}
+
+	//
+	// No timestamp known: Find first available day.
+
+	const GranDay int64 = 24 * 60 * 60
+	today := time.Now().Unix()
+	today -= today % GranDay
+
+	var candles []querier.InsertCandlesParams
+
+	for start := MinTimestamp; start <= today && len(candles) == 0; start += GranDay * MaxPayload {
+		candles, err = svc.downloadCandles(ctx, pair, MinTimestamp, GranDay)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	minTS := today
+	for _, candle := range candles {
+		minTS = min(minTS, candle.Start.Unix())
+	}
+
+	return minTS, nil
+}
+
+func (svc *Coinbase) downloadCandles(ctx context.Context, pair string, start, granularity int64) ([]querier.InsertCandlesParams, error) {
+	// Compute/normalise timestamps.
 	start -= start % Granularity
-	end -= end % Granularity
+	end := start + Granularity*(MaxPayload-1) // `end` is inclusive.
 
 	//
 	// Build and execute request.
