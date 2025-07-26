@@ -12,6 +12,7 @@ deploy:
 	kind create cluster --config $(TMP_CONFIG)
 	rm $(TMP_CONFIG)
 
+	kind load docker-image freyr
 	helm install freyr ./charts -f ./charts/values.yaml
 	
 	kubectl create namespace monitoring

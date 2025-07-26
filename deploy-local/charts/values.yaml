@@ -1,5 +1,7 @@
 freyr:
+  metricsPort: 9090
   database:
+    host: postgres.freyr.svc.cluster.local
     port: 5432
     user: freyr
     password: freyr

@@ -1,0 +1,49 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: freyr-config-map
+  namespace: freyr
+data:
+  freyr_config.yaml: |
+    {{- toYaml .Values.freyr | nindent 4 }}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    configmap.reloader.stakater.com/reload: freyr-config-map
+  name: freyr
+  namespace: freyr
+spec:
+  selector:
+    matchLabels:
+      app: freyr
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.freyr.metricsPort }}"
+      labels:
+        app: freyr
+    spec:
+      containers:
+        - name: freyr
+          image: freyr
+          imagePullPolicy: Never
+          command: [ "./freyr" ]
+          args:
+            - "--config"
+            - "/app/config/freyr_config.yaml"
+          ports:
+            - name: metrics-port
+              containerPort: {{ .Values.freyr.metricsPort }}
+          volumeMounts:
+            - name: freyr-config-volume
+              mountPath: /app/config
+              readOnly: true
+      volumes:
+        - name: freyr-config-volume
+          configMap:
+            name: freyr-config-map
