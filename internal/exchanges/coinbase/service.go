@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
+
+	"github.com/risingwavelabs/eris"
 
 	"freyr/internal/utils"
 )
@@ -30,12 +33,21 @@ func (svc *Coinbase) Run(ctx context.Context) error {
 
 	ticker := time.NewTicker(time.Duration(Granularity) * time.Second)
 	for range utils.CtxChanIter(ctx, ticker.C) {
+		wg := sync.WaitGroup{}
+		wg.Add(len(pairs))
+
 		for _, pair := range pairs {
-			err := svc.collectRecentCandles(ctx, pair)
-			if err != nil {
-				fmt.Printf("Error when collecting '%s': %v", pair, err)
-			}
+			go func(pair string) {
+				defer wg.Done()
+
+				err := svc.collectRecentCandles(ctx, pair)
+				if err != nil {
+					fmt.Printf("Error when collecting '%s': %s\n", pair, eris.ToString(err, true))
+				}
+			}(pair)
 		}
+
+		wg.Wait()
 	}
 
 	return nil
