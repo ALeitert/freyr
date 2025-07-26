@@ -13,6 +13,7 @@ import (
 
 	"freyr/internal/database"
 	"freyr/internal/database/querier"
+	"freyr/internal/metrics"
 )
 
 const (
@@ -49,6 +50,20 @@ func (svc *Coinbase) collectRecentCandles(ctx context.Context, pair string) erro
 		if err != nil {
 			return err
 		}
+
+		if len(candles) == 0 {
+			continue
+		}
+
+		maxTS := time.Time{}
+		for _, candle := range candles {
+			if maxTS.Before(candle.Start) {
+				maxTS = candle.Start
+			}
+		}
+		metrics.LatestCandleCollected.
+			WithLabelValues("coinbase", pair).
+			Set(float64(maxTS.Unix()))
 	}
 
 	return nil
@@ -100,6 +115,10 @@ func (svc *Coinbase) downloadCandles(ctx context.Context, pair string, start, gr
 	if err != nil {
 		return nil, err
 	}
+
+	metrics.LatestCandleQueried.
+		WithLabelValues("coinbase", pair).
+		Set(float64(end))
 
 	res, err := svc.httpClient.Do(req)
 	if err != nil {
