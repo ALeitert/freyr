@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/risingwavelabs/eris"
 
+	"freyr/internal/metrics"
 	"freyr/internal/order"
 	"freyr/internal/utils"
 )
@@ -172,7 +173,7 @@ func (s *Binance) Run(ctx context.Context) (err error) {
 			continue
 		}
 
-		// Verify and update version.
+		// Verify version.
 		if msg.Data.UF != maxUpdateVersion+1 {
 			return eris.Errorf(
 				"invalid ob update version: expected %d, actual %d",
@@ -182,6 +183,10 @@ func (s *Binance) Run(ctx context.Context) (err error) {
 
 		//
 		// Process updates.
+
+		metrics.OrderBookUpdates.
+			WithLabelValues("binance", "btc-usdt").
+			Add(float64(len(msg.Data.Asks) + len(msg.Data.Bids)))
 
 		orderBook.Update(msg.Data.Asks, msg.Data.Bids, msg.Data.ETime)
 		maxUpdateVersion = msg.Data.UL
